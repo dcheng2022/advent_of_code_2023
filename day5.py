@@ -32,7 +32,7 @@ def parse_maps(maps):
 
         for i in range(range_len):
             seeds.add(range_start + i)
-    
+
     return seeds """
 
 
@@ -43,7 +43,7 @@ def get_seed_ranges(maps):
     for i in range(0, len(seeds_str) - 1, 2):
         range_start = int(seeds_str[i])
         range_len = int(seeds_str[i + 1])
-        range_end = range_start + range_len
+        range_end = range_start + range_len - 1
 
         seed_ranges.append((range_start, range_end))
 
@@ -61,7 +61,7 @@ def get_mapped_num(num, ranges):
         dst_range_start, src_range_start, range_len = map_range
         src_range_end = src_range_start + range_len
 
-        if num >= src_range_start and num <= src_range_end:
+        if num >= src_range_start and num < src_range_end:
             offset = num - src_range_start
 
             return dst_range_start + offset
@@ -77,7 +77,7 @@ def get_reverse_mapped_num(num, ranges):
         src_range_start, dst_range_start, range_len = map_range
         src_range_end = src_range_start + range_len
 
-        if num >= src_range_start and num <= src_range_end:
+        if num >= src_range_start and num < src_range_end:
             offset = num - src_range_start
 
             return dst_range_start + offset
@@ -121,7 +121,7 @@ def get_lowest_location(maps):
     return min(seed_locations)
 
 
-def get_actual_lowest_location(maps):
+def get_actual_lowest_location_bu(maps):
     maps = maps.split('\n\n')
     seed_ranges = get_seed_ranges(maps)
     map_names_and_ranges = parse_maps(maps)
@@ -134,17 +134,14 @@ def get_actual_lowest_location(maps):
 
         lowest_location += 1
 
-        if lowest_location % 100000 == 0: print(f'checked {lowest_location} so far...')
-
     return lowest_location
 
 
-def get_actual_lowest_location_par(maps, start, increment):
+def get_actual_lowest_location_bu_par(maps, start, increment):
     maps = maps.split('\n\n')
     seed_ranges = get_seed_ranges(maps)
     map_names_and_ranges = parse_maps(maps)
     lowest_location = start
-    locations_checked = 0 
 
     while True:
         potential_seed_num = get_potential_seed_num(map_names_and_ranges, lowest_location)
@@ -152,11 +149,46 @@ def get_actual_lowest_location_par(maps, start, increment):
         if is_seed(seed_ranges, potential_seed_num): break
 
         lowest_location += increment
-        locations_checked += 1
-
-        if locations_checked % 1000000 == 0: print(f'{locations_checked} checked so far...')
 
     return lowest_location
+
+
+def get_actual_lowest_location_td_par(maps, seed_range):
+    map_names_and_ranges = parse_maps(maps)
+    lowest_location = get_location(map_names_and_ranges, seed_range[0])
+
+    for seed in seed_range[1:]:
+        lowest_location = min(lowest_location, get_location(map_names_and_ranges, seed))
+
+    return lowest_location
+
+
+def get_largest_range(ranges):
+    largest_range = ranges[0]
+    largest_diff = ranges[0][1] - ranges[0][0]
+
+    for range in ranges[1:]:
+        range_start, range_end = range
+        range_diff = range_end - range_start
+
+        if range_diff > largest_diff:
+            largest_diff = range_diff
+            largest_range = range
+
+    return largest_range
+
+
+def expand_to_n_ranges(ranges, n):
+    while len(ranges) < n:
+        range = get_largest_range(ranges)
+        range_start, range_end = range
+        range_mid = (range_start + range_end) // 2
+
+        ranges.remove(range)
+        ranges.append((range_start, range_mid))
+        ranges.append((range_mid + 1, range_end))
+
+    return ranges
 
 
 if __name__ == '__main__':
@@ -201,7 +233,7 @@ if __name__ == '__main__':
     print(f'lowest_loc took {end-start} seconds')
 
     start = time.time()
-    assert(get_actual_lowest_location(test1) == 46)
+    assert(get_actual_lowest_location_bu(test1) == 46)
     end = time.time()
 
     print(f'act_lowest_loc took {end-start} seconds')
@@ -212,22 +244,53 @@ if __name__ == '__main__':
 
     print(f'lowest_loc took {end-start} seconds')
 
-    def run_test_with_n_processes(n):
+    def run_test_with_n_processes_bottom_up(test, n):
+        results = []
         pool = Pool(processes=n)
 
         start = time.time()
-        
+
         for i in range(n):
-            pool.apply_async(get_actual_lowest_location_par, args=(test2, 40000000 + i, n), callback=(lambda x: print(x) or pool.terminate()))
+            pool.apply_async(get_actual_lowest_location_bu_par, args=(test, i, n), callback=(lambda x: results.append(x)))
 
         pool.close()
         pool.join()
-    
+
         end = time.time()
 
-        print(f'act_lowest_loc with {n} processes took {end-start} seconds')
+        print(min(results))
+        print(f'act_lowest_loc_bu with {n} processes took {end-start} seconds')
 
         return 0
 
-    run_test_with_n_processes(2)
-    
+
+    def run_test_with_n_min_processes_top_down(test, min_n):
+        results = []
+        maps = test.split('\n\n')
+        seed_ranges = get_seed_ranges(maps)
+        seed_ranges = expand_to_n_ranges(seed_ranges, min_n) if len(seed_ranges) < min_n else seed_ranges
+        seed_ranges = [range(seed_range[0], seed_range[1] + 1) for seed_range in seed_ranges]
+
+        pool = Pool(processes=max(min_n, len(seed_ranges)))
+
+        start = time.time()
+
+        for i in range(len(seed_ranges)):
+            pool.apply_async(get_actual_lowest_location_td_par, args=(maps, seed_ranges[i]), callback=(lambda x: results.append(x)))
+
+        pool.close()
+        pool.join()
+
+        end = time.time()
+
+        print(min(results))
+        print(f'act_lowest_loc_td with {len(seed_ranges)} processes took {end-start} seconds')
+
+        return 0
+
+
+    run_test_with_n_processes_bottom_up(test1, 1)
+    run_test_with_n_processes_bottom_up(test2, 20)
+
+    # run_test_with_n_min_processes_top_down(test1, 2)
+    # run_test_with_n_min_processes_top_down(test2, 20)
