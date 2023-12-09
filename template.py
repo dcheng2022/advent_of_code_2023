@@ -1,3 +1,5 @@
+from inputs.day import test2
+
 def func():
     return 
 
