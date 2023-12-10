@@ -21,6 +21,37 @@ def get_num_pairs(card_counts):
     return num_pairs
 
 
+def get_hand_type_joker_helper(hand):
+    """
+        Gets hand type for the hand remaining
+        after all Jokers are removed
+    """
+
+    jokerless_hand = hand.replace('J', '')
+    card_counts = {}
+
+    for card in jokerless_hand:
+        card_counts[card] = card_counts.get(card, 0) + 1
+    
+    num_cards_in_hand = len(jokerless_hand)
+    num_unique_cards = len(card_counts)
+
+    if num_unique_cards == num_cards_in_hand:
+        jokerless_type = 1
+    elif num_unique_cards == 1 and num_cards_in_hand == 4:
+        jokerless_type = 6
+    elif num_unique_cards == 1 and num_cards_in_hand == 3:
+        jokerless_type = 4
+    elif num_unique_cards == 2 and 3 in card_counts.values() and num_cards_in_hand == 4:
+        jokerless_type = 4
+    elif get_num_pairs(card_counts) == 2:
+        jokerless_type = 3
+    else:
+        jokerless_type = 2
+
+    return jokerless_type
+
+
 def get_hand_type_joker(hand):
     """
         Joker transformations...
@@ -35,27 +66,7 @@ def get_hand_type_joker(hand):
     if not 'J' in hand:
         jokerless_type = get_hand_type(hand)
     else:
-        jokerless_hand = hand.replace('J', '')
-        card_counts = {}
-
-        for card in jokerless_hand:
-            card_counts[card] = card_counts.get(card, 0) + 1
-        
-        num_cards_in_hand = len(jokerless_hand)
-        num_unique_cards = len(card_counts)
-
-        if num_unique_cards == num_cards_in_hand:
-            jokerless_type = 1
-        elif num_unique_cards == 1 and num_cards_in_hand == 4:
-            jokerless_type = 6
-        elif num_unique_cards == 1 and num_cards_in_hand == 3:
-            jokerless_type = 4
-        elif num_unique_cards == 2 and 3 in card_counts.values() and num_cards_in_hand == 4:
-            jokerless_type = 4
-        elif get_num_pairs(card_counts) == 2:
-            jokerless_type = 3
-        else:
-            jokerless_type = 2
+        jokerless_type = get_hand_type_joker_helper(hand)
 
     while 'J' in hand:
         if jokerless_type in set([1, 5, 6]):
@@ -133,30 +144,32 @@ def get_sorted_hands_and_card_val(hands, card_idx, joker=False):
 
 
 def resolve_ties_and_append(hands_ranked_asc, tied_hands, card_idx=0, joker=False):
-    if len(tied_hands) == 1:
+    if len(tied_hands) == 1: 
         hands_ranked_asc.extend(tied_hands)
-    else:
-        sorted_hands_and_first_vals = get_sorted_hands_and_card_val(tied_hands, card_idx, joker)
-        num_hands = len(tied_hands)
-        tied_hands = [sorted_hands_and_first_vals[0][0]]
-        tied_val = sorted_hands_and_first_vals[0][1]
-        hand_idx = 1
+        
+        return 0
 
-        while hand_idx < num_hands:
-            hand, hand_val = sorted_hands_and_first_vals[hand_idx]
+    sorted_hands_and_first_vals = get_sorted_hands_and_card_val(tied_hands, card_idx, joker)
+    num_hands = len(tied_hands)
+    tied_hands = [sorted_hands_and_first_vals[0][0]]
+    tied_val = sorted_hands_and_first_vals[0][1]
+    hand_idx = 1
 
-            if hand_val == tied_val:
-                tied_hands.append(hand)
-            else:
-                resolve_ties_and_append(hands_ranked_asc, tied_hands, card_idx + 1, joker) 
+    while hand_idx < num_hands:
+        hand, hand_val = sorted_hands_and_first_vals[hand_idx]
 
-                tied_hands = [hand]
-                tied_val = hand_val
+        if hand_val == tied_val:
+            tied_hands.append(hand)
+        else:
+            resolve_ties_and_append(hands_ranked_asc, tied_hands, card_idx + 1, joker) 
 
-            hand_idx += 1
+            tied_hands = [hand]
+            tied_val = hand_val
 
-        if len(tied_hands) >= 1:
-            resolve_ties_and_append(hands_ranked_asc, tied_hands, card_idx + 1, joker)
+        hand_idx += 1
+
+    if len(tied_hands) >= 1:
+        resolve_ties_and_append(hands_ranked_asc, tied_hands, card_idx + 1, joker)
                
     return 0 
 
