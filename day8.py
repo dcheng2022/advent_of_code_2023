@@ -1,4 +1,5 @@
 from inputs.day8 import test2
+from time import sleep
 from multiprocessing import Pool, Manager
 
 def parse(inst_and_network):
@@ -75,15 +76,19 @@ def get_simul_total_steps(inst_and_network):
 
 def remove_min_step(steps_list):
     min_num = steps_list[0][0] 
-    min_idx = 0
+    min_idxs = [0]
 
     for (idx, lst) in enumerate(steps_list):
-        if lst[0] >= min_num: continue
+        if lst[0] > min_num: 
+            continue
+        elif lst[0] == min_num:
+            min_idxs.append(idx)
+        else:
+            min_num = lst[0]
+            min_idxs = [idx]
 
-        min_num = lst[0]
-        min_idx = idx
-
-    steps_list[min_idx].pop(0)
+    for idx in min_idxs:
+        steps_list[idx].pop(0)
 
     return 0
 
@@ -91,19 +96,11 @@ def remove_min_step(steps_list):
 def watch_steps_list(pool, steps_list):
     steps_taken = None
 
+    # Wait for lists to populate
+    sleep(1)
+
     while True:
-        wait = False
-
-        for lst in steps_list:
-            if len(lst) != 0:
-                continue
-            else:   
-                wait = True
-
-                break
-
-        if wait: continue
-
+        print([len(l) for l in steps_list])
         steps_taken = steps_list[0][0]
         not_done = False
 
