@@ -74,21 +74,14 @@ def get_simul_total_steps(inst_and_network):
     return get_simul_steps_to_zzz(instructions, network)
 
 
-def remove_min_step(steps_list):
-    min_num = steps_list[0][0] 
-    min_idxs = [0]
+def remove_fewer_steps(steps_list):
+    max_num = max(steps_list, key=lambda x: x[0])[0]
 
     for (idx, lst) in enumerate(steps_list):
-        if lst[0] > min_num: 
+        if lst[0] == max_num:
             continue
-        elif lst[0] == min_num:
-            min_idxs.append(idx)
         else:
-            min_num = lst[0]
-            min_idxs = [idx]
-
-    for idx in min_idxs:
-        steps_list[idx].pop(0)
+            lst.pop(0)
 
     return 0
 
@@ -107,7 +100,7 @@ def watch_steps_list(pool, steps_list):
         for lst in steps_list[1:]:
             if lst[0] == steps_taken: continue
 
-            remove_min_step(steps_list)
+            remove_fewer_steps(steps_list)
 
             not_done = True
 
