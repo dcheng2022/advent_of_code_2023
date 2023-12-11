@@ -1,6 +1,7 @@
 from inputs.day8 import test2
-from time import sleep
-from multiprocessing import Pool, Manager
+# from time import sleep
+# from multiprocessing import Pool, Manager
+from functools import reduce
 
 def parse(inst_and_network):
     inst_and_network = inst_and_network.split('\n')
@@ -24,19 +25,62 @@ def get_names_ending_a(names):
     return True """
 
 
-def get_cycle_start_and_len(instructions, network, location_name):
+def get_first_zzz_after(instructions, network, location_name, startat):
+    steps_taken = 0
+
+    for inst in instructions[:startat]:
+        location_name = network[location_name][inst]
+        steps_taken += 1
+
+    while True:
+        for inst in instructions[startat:]:
+            location_name = network[location_name][inst]
+            steps_taken += 1
+
+            if location_name.endswith('Z'): return steps_taken
+
+        startat = 0
+
+
+def get_steps_to_zzz_before(instructions, network, location_name, endat):
+    steps_taken = 0
+    steps_to_z = []
+    
+    for inst in instructions[:endat]:
+        location_name = network[location_name][inst]
+        steps_taken += 1
+
+        if location_name.endswith('Z'): steps_to_z.append(steps_taken)
+
+    return steps_to_z
+
+
+def get_cycle_start(instructions, network, location_name):
     steps_taken = 0
     steps_to_z = {}
     num_instructions = len(instructions)
 
     while True:
+        for inst in instructions:
+            print(steps_to_z)
+            location_name = network[location_name][inst]
+            steps_taken += 1
+            steps_to_z_key = (steps_taken % num_instructions) + 1
+            print(f'loc: {location_name} steps: {steps_taken} key: {steps_to_z_key}')
+            loc_info = steps_to_z.get(steps_to_z_key, False)
+
+            if loc_info and loc_info[0] == location_name: return loc_info[1]
+
+            steps_to_z[steps_to_z_key] = (location_name, steps_taken)
 
 
 def get_simul_steps_to_zzz(instructions, network):
     instructions = [0 if char == 'L' else 1 for char in instructions]
     location_names = get_names_ending_a(list(network.keys()))
-    all_cycle_starts_and_lens = [get_cycle_start_and_len(instructions, network, loc_name) for loc_name in location_names]
-    latest_start = max(all_cycle_starts_and_lens, key=lambda x: x[0])[0]
+    print('getting cycle starts')
+    all_cycle_starts = [get_cycle_start(instructions, network, loc_name) for loc_name in location_names]
+    latest_start = max(all_cycle_starts)
+    print(f'latest start: {latest_start}')
     all_steps_before_cycle = [get_steps_to_zzz_before(instructions, network, loc_name, latest_start) for loc_name in location_names]
     acyclic_result = get_simul_steps_taken(all_steps_before_cycle)
 
