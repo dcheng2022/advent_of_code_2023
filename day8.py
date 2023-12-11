@@ -1,7 +1,8 @@
 from inputs.day8 import test2
+from math import lcm
 # from time import sleep
 # from multiprocessing import Pool, Manager
-from functools import reduce
+# from functools import reduce
 
 def parse(inst_and_network):
     inst_and_network = inst_and_network.split('\n')
@@ -25,7 +26,7 @@ def get_names_ending_a(names):
     return True """
 
 
-def get_first_zzz_after(instructions, network, location_name, startat):
+""" def get_first_zzz_after(instructions, network, location_name, startat):
     steps_taken = 0
 
     for inst in instructions[:startat]:
@@ -39,10 +40,10 @@ def get_first_zzz_after(instructions, network, location_name, startat):
 
             if location_name.endswith('Z'): return steps_taken
 
-        startat = 0
+        startat = 0 """
 
 
-def get_steps_to_zzz_before(instructions, network, location_name, endat):
+""" def get_steps_to_zzz_before(instructions, network, location_name, endat):
     steps_taken = 0
     steps_to_z = []
     
@@ -52,32 +53,45 @@ def get_steps_to_zzz_before(instructions, network, location_name, endat):
 
         if location_name.endswith('Z'): steps_to_z.append(steps_taken)
 
-    return steps_to_z
+    return steps_to_z """
 
 
-def get_cycle_start(instructions, network, location_name):
+""" def get_cycle_start(instructions, network, location_name):
     steps_taken = 0
-    steps_to_z = {}
+    steps_to_z = {0: {location_name: steps_taken}}
     num_instructions = len(instructions)
 
     while True:
         for inst in instructions:
-            print(steps_to_z)
             location_name = network[location_name][inst]
             steps_taken += 1
-            steps_to_z_key = (steps_taken % num_instructions) + 1
-            print(f'loc: {location_name} steps: {steps_taken} key: {steps_to_z_key}')
-            loc_info = steps_to_z.get(steps_to_z_key, False)
+            steps_to_z_key = (steps_taken % num_instructions)
+            locs_at_step = steps_to_z.get(steps_to_z_key, False)
 
-            if loc_info and loc_info[0] == location_name: return loc_info[1]
+            if not locs_at_step:
+                steps_to_z[steps_to_z_key] = {location_name: steps_taken}
 
-            steps_to_z[steps_to_z_key] = (location_name, steps_taken)
+                continue
+
+            if location_name in locs_at_step.keys(): 
+                print(f'cycle start: {location_name}')
+                print(f'reached {location_name} again at step {steps_taken}, resolves to key {steps_to_z_key}')
+                return locs_at_step[location_name]
+
+            steps_to_z[steps_to_z_key][location_name] = steps_taken """
 
 
 def get_simul_steps_to_zzz(instructions, network):
-    instructions = [0 if char == 'L' else 1 for char in instructions]
+    location_names = get_names_ending_a(list(network.keys()))
+    steps_to_zzz = [get_steps_to_zzz(instructions, network, location_name) for location_name in location_names]
+    
+    
+    return lcm(*steps_to_zzz)
+
+""" instructions = [0 if char == 'L' else 1 for char in instructions]
     location_names = get_names_ending_a(list(network.keys()))
     print('getting cycle starts')
+    print(f'starting locs: {location_names}')
     all_cycle_starts = [get_cycle_start(instructions, network, loc_name) for loc_name in location_names]
     latest_start = max(all_cycle_starts)
     print(f'latest start: {latest_start}')
@@ -86,9 +100,12 @@ def get_simul_steps_to_zzz(instructions, network):
 
     if acyclic_result: return acyclic_result
 
+    print('not acyclic result')
+
     all_steps_to_first_zzz = [get_first_zzz_after(instructions, network, loc_name, latest_start) for loc_name in location_names]
 
-    return reduce(lambda x, y: x * y, all_steps_to_first_zzz)
+    return reduce(lambda x, y: x * y, all_cycle_starts) """
+    
 
 
 """ def get_simul_steps_to_zzz_par(instructions, network, location_name, idx, start, interval):
@@ -105,17 +122,17 @@ def get_simul_steps_to_zzz(instructions, network):
     return (idx, steps_to_z, location_name) """
 
 
-def get_steps_to_zzz(instructions, network):
+def get_steps_to_zzz(instructions, network, location_name='AAA'):
     steps_taken = 0
     instructions = [0 if char == 'L' else 1 for char in instructions]
-    location_name = 'AAA'
+    location_name = location_name
 
     while True:
         for inst in instructions:
             location_name = network[location_name][inst]
             steps_taken += 1
 
-            if location_name == 'ZZZ': return steps_taken
+            if location_name.endswith('Z'): return steps_taken
 
 
 def get_total_steps(inst_and_network):
@@ -127,10 +144,12 @@ def get_total_steps(inst_and_network):
 def get_simul_total_steps(inst_and_network):
     instructions, network = parse(inst_and_network)
 
+    print(f'running test on...\n\n{instructions}\n')
+
     return get_simul_steps_to_zzz(instructions, network)
 
 
-def remove_fewer_steps(steps_list):
+""" def remove_fewer_steps(steps_list):
     max_num = max(steps_list, key=lambda x: x[0])[0]
 
     for (idx, lst) in enumerate(steps_list):
@@ -139,10 +158,10 @@ def remove_fewer_steps(steps_list):
         while lst != [] and lst[0] < max_num:
             lst.pop(0)
 
-    return 0 
+    return 0 """
 
 
-def get_simul_steps_taken(steps_list):
+""" def get_simul_steps_taken(steps_list):
     while not 0 in [len(l) for l in steps_list]:
         steps_taken = steps_list[0][0]
         in_progress = False
@@ -158,7 +177,7 @@ def get_simul_steps_taken(steps_list):
 
         if not in_progress: return steps_taken
         
-    return None 
+    return None """
       
 
 """ def update_steps_list_and_loc(steps_list, location_names, payload):
@@ -234,6 +253,19 @@ if __name__ == '__main__':
     XXX = (XXX, XXX)"""
 
     assert(get_simul_total_steps(test3) == 6)
-    assert(run_test_simul_par(test3) == 6)
+    # assert(run_test_simul_par(test3) == 6)
+
+    test4 = """RL
+
+    AAA = (BBB, CCC)
+    BBB = (DDD, EEE)
+    CCC = (ZZZ, GGG)
+    DDD = (DDD, DDD)
+    EEE = (EEE, EEE)
+    GGG = (GGG, GGG)
+    ZZZ = (ZZZ, ZZZ) """
+
+    assert(get_total_steps(test4) == 2)
+    assert(get_simul_total_steps(test4) == 2)
     
     print(get_simul_total_steps(test2))
